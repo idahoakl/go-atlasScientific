@@ -1,0 +1,1 @@
+Library to access Atlas Scientific sensors over i2c.

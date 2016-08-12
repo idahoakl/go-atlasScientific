@@ -1,0 +1,4 @@
+*.iml
+.idea
+cmd/*
+!cmd/main.go
