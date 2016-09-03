@@ -16,6 +16,7 @@ var (
 	deviceInfoRegex = regexp.MustCompile(`\?I,(?P<deviceType>\w+),(?P<firmwareVersion>\d+\.?\d*)`)
 	tempCompRegex = regexp.MustCompile(`\?T,(?P<tempCompensation>\d+\.?\d*)`)
 	ledStatRegex = regexp.MustCompile(`\?L,(?P<ledStatus>[01])`)
+	calRegex = regexp.MustCompile(`\?CAL,(?P<calCount>\d)`)
 
 	errParseResponse = errors.New("Response could not be parsed")
 )
@@ -46,6 +47,8 @@ type AtlasScientificSensor interface {
 	TempCompensation(tempC float32) error
 	GetLedStatus() (bool, error)
 	LedStatus(isLedOn bool) error
+	ClearCalibration() error
+	GetCalibrationCount() (int, error)
 }
 
 type ReadError struct {
@@ -58,8 +61,6 @@ func (this *ReadError) Error() string {
 }
 
 func (this *AtlasScientific) Init() error {
-	this.Mtx.Lock()
-	defer this.Mtx.Unlock()
 	return nil
 }
 
@@ -211,6 +212,44 @@ func (this *AtlasScientific) LedStatus(isLedOn bool) error {
 	}
 
 	return nil
+}
+
+//Example instruction sequence:
+//	Write: CAL,clear
+//	Wait: 300ms
+//	Read: <successful read, no data>
+func (this *AtlasScientific) ClearCalibration() error {
+	this.Mtx.Lock()
+	defer this.Mtx.Unlock()
+
+	if _, e := this.Connection.Write(this.Address, []byte("CAL,clear")); e != nil {
+		return e
+	}
+
+	if _, e := this.PerformRead(300 * time.Millisecond); e != nil {
+		return e;
+	}
+
+	return nil
+}
+
+//Example instruction sequence:
+//	Write: CAL,?
+//	Wait: 300ms
+//	Read: ?CAL,2
+func (this *AtlasScientific) GetCalibrationCount() (int, error) {
+	this.Mtx.Lock()
+	defer this.Mtx.Unlock()
+
+	if valMap, e := this.WriteReadParse([]byte("CAL,?"), 300 * time.Millisecond, calRegex); e != nil {
+		return 0, e
+	} else {
+		if i, e := strconv.ParseInt(valMap["calCount"], 10, 0); e != nil {
+			return 0, e
+		} else {
+			return int(i), nil
+		}
+	}
 }
 
 func (this *AtlasScientific) PerformRead(waitTime time.Duration) (string, error) {

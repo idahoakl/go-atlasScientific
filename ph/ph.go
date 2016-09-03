@@ -12,7 +12,6 @@ import (
 
 var (
 	slopeRegex = regexp.MustCompile(`\?SLOPE,(?P<acidSlope>\d+\.?\d*),(?P<baseSlope>\d+\.?\d*)`)
-	calRegex = regexp.MustCompile(`\?CAL,(?P<calCount>\d)`)
 )
 
 type PH struct {
@@ -78,26 +77,7 @@ func (this *PH) GetCalibrationSlope() (*CalibrationSlope, error) {
 }
 
 //Example instruction sequence:
-//	Write: CAL,?
-//	Wait: 300ms
-//	Read: ?CAL,2
-func (this *PH) GetCalibrationCount() (int, error) {
-	this.Mtx.Lock()
-	defer this.Mtx.Unlock()
-
-	if valMap, e := this.WriteReadParse([]byte("CAL,?"), 300 * time.Millisecond, calRegex); e != nil {
-		return 0, e
-	} else {
-		if i, e := strconv.ParseInt(valMap["calCount"], 10, 0); e != nil {
-			return 0, e
-		} else {
-			return int(i), nil
-		}
-	}
-}
-
-//Example instruction sequence:
-//	Write: CAL,mid, 7.00
+//	Write: CAL,mid,7.00
 //	Wait: 1600ms
 //	Read: <successful read, no data>
 func (this *PH) Calibration(calPoint string, phValue float32) error {
@@ -113,26 +93,6 @@ func (this *PH) Calibration(calPoint string, phValue float32) error {
 	}
 
 	if _, e := this.PerformRead(1600 * time.Millisecond); e != nil {
-		return e;
-	}
-
-	return nil
-}
-
-
-//Example instruction sequence:
-//	Write: CAL,clear
-//	Wait: 300ms
-//	Read: <successful read, no data>
-func (this *PH) ClearCalibration() error {
-	this.Mtx.Lock()
-	defer this.Mtx.Unlock()
-
-	if _, e := this.Connection.Write(this.Address, []byte("CAL,clear")); e != nil {
-		return e
-	}
-
-	if _, e := this.PerformRead(300 * time.Millisecond); e != nil {
 		return e;
 	}
 
