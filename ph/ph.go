@@ -37,7 +37,7 @@ func New(address uint8, connection *i2c.I2C) (*PH, error) {
 
 func (this *PH) GetValue() (float32, error) {
 	if rawValue, e := this.GetRawValue(); e != nil {
-		return 0, e
+		return atlasScientific.ERROR_VALUE, e
 	} else {
 		if ph, e := strconv.ParseFloat(rawValue, 32); e != nil {
 			return 0, e

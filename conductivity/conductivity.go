@@ -69,7 +69,7 @@ func (this *Conductivity) Init() error {
 
 func (this *Conductivity) GetValue() (float32, error) {
 	if valMap, e := this.GetAllValues(); e != nil {
-		return 0, e
+		return atlasScientific.ERROR_VALUE, e
 	} else {
 		return valMap[this.DefaultMeasurement], nil
 	}
@@ -180,10 +180,10 @@ func (this *Conductivity) GetProbeType() (float32, error) {
 	defer this.Mtx.Unlock()
 
 	if valMap, e := this.WriteReadParse([]byte("K,?"), 300 * time.Millisecond, probeTypeRegex); e != nil {
-		return 0, e
+		return atlasScientific.ERROR_VALUE, e
 	} else {
 		if tempComp, err := strconv.ParseFloat(valMap["probeType"], 32); err != nil {
-			return 0, err
+			return atlasScientific.ERROR_VALUE, err
 		} else {
 			return float32(tempComp), nil
 		}
@@ -228,8 +228,8 @@ func (this *Conductivity) Calibration(calPoint CalibrationPoint, ecValue float32
 		calStr = "CAL,dry"
 		calTime = 2000 * time.Millisecond
 	} else {
-		calStr = fmt.Sprintf("CAL,%s,%f", calPoint, ecValue)
-		calTime = 1300 * time.Millisecond
+		calStr = fmt.Sprintf("CAL,%s,%d", calPoint, int(ecValue))
+		calTime = 1500 * time.Millisecond
 	}
 
 	if _, e := this.Connection.Write(this.Address, []byte(calStr)); e != nil {

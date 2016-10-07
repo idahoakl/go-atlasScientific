@@ -9,6 +9,7 @@ import (
 	"regexp"
 	"strconv"
 	"fmt"
+	"bytes"
 )
 
 var (
@@ -20,6 +21,8 @@ var (
 
 	errParseResponse = errors.New("Response could not be parsed")
 )
+
+const ERROR_VALUE = -1
 
 type AtlasScientific struct {
 	Connection *i2c.I2C
@@ -226,7 +229,7 @@ func (this *AtlasScientific) ClearCalibration() error {
 		return e
 	}
 
-	if _, e := this.PerformRead(300 * time.Millisecond); e != nil {
+	if _, e := this.PerformRead(1300 * time.Millisecond); e != nil {
 		return e;
 	}
 
@@ -255,7 +258,7 @@ func (this *AtlasScientific) GetCalibrationCount() (int, error) {
 func (this *AtlasScientific) PerformRead(waitTime time.Duration) (string, error) {
 	time.Sleep(waitTime);
 
-	data := make([]byte, 32);
+	data := make([]byte, 64);
 	if _, e := this.Connection.Read(this.Address, data); e != nil {
 		return "", e
 	}
@@ -279,7 +282,9 @@ func (this *AtlasScientific) PerformRead(waitTime time.Duration) (string, error)
 		}
 	}
 
-	return string(data[1:]), nil;
+	trimData := bytes.Trim(data, "\x00")
+
+	return string(trimData[1:]), nil;
 }
 
 func (this *AtlasScientific) WriteReadParse(writeCommand []byte, waitTime time.Duration, parseRegex *regexp.Regexp) (map[string]string, error) {
