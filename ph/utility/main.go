@@ -2,13 +2,13 @@ package main
 
 import (
 	"github.com/idahoakl/go-atlasScientific/ph"
+	"github.com/idahoakl/go-atlasScientific/utility"
 	"github.com/idahoakl/go-i2c"
 	"bufio"
 	"os"
 	"log"
 	"fmt"
 	"strconv"
-	"strings"
 )
 
 type cmdFunc func(*bufio.Reader, *ph.PH)
@@ -20,10 +20,10 @@ type cmd struct {
 }
 
 var cmds = []cmd{
-	cmd{name: "info", exec: infoCmd, desc: "Device information"},
-	cmd{name: "stat", exec: statusCmd, desc: "Device status"},
-	cmd{name: "read", exec: readCmd, desc: "Take reading"},
-	cmd{name: "temp", exec: tempCompCmd, desc: "Get/set temperature compensation"},
+	cmd{name: "info", exec: infoCmd, desc: utility.DeviceInfoDesc},
+	cmd{name: "stat", exec: statusCmd, desc: utility.DeviceStatDesc},
+	cmd{name: "read", exec: readCmd, desc: utility.ReadingDesc},
+	cmd{name: "temp", exec: tempCompCmd, desc: utility.TempCompDesc},
 	cmd{name: "phCal", exec: phCalCmd, desc: "Get/set PH calibration"},
 	cmd{name: "slope", exec: slopeCmd, desc: "Probe calibration slope"},
 }
@@ -52,7 +52,7 @@ func main() {
 	for {
 		printActions()
 		fmt.Print("-> ")
-		if text, e := readAndSanitizeLine(reader); e != nil {
+		if text, e := utility.ReadAndSanitizeLine(reader); e != nil {
 			log.Fatal(e)
 		} else {
 			if cmd, ok := cmdMap[text]; ok {
@@ -73,82 +73,27 @@ func printActions() {
 	}
 }
 
-func readAndSanitizeLine(reader *bufio.Reader) (string, error) {
-	if text, e := reader.ReadString('\n'); e != nil {
-		return nil, e
-	} else {
-		text = strings.TrimRight(text, "\n")
-		return text, nil
-	}
-}
-
 func infoCmd(reader *bufio.Reader, probe *ph.PH) {
-	println("\nDevice Info")
-	if i, e := probe.GetDeviceInfo(); e != nil {
-		log.Fatal(e)
-	} else {
-		fmt.Printf("\tType: %s\n", i.Type)
-		fmt.Printf("\tFirmware version: %f\n", i.FirmwareVersion)
-	}
+	utility.InfoCmd(reader, probe)
 }
 
 func statusCmd(reader *bufio.Reader, probe *ph.PH) {
-	println("\nDevice Status")
-	if s, e := probe.GetStatus(); e != nil {
-		log.Fatal(e)
-	} else {
-		fmt.Printf("\tRestart code: %s\n", s.RestartCode)
-		fmt.Printf("\tVCC voltage: %f\n", s.VccVoltage)
-	}
+	utility.ReadCmd(reader, probe)
 }
 
 func readCmd(reader *bufio.Reader, probe *ph.PH) {
-	println("\nPH Reading")
-	if v, e := probe.GetValue(); e != nil {
-		log.Fatal(e)
-	} else {
-		fmt.Printf("\tPH: %f\n", v)
-	}
+	utility.ReadCmd(reader, probe)
 }
 
 func tempCompCmd(reader *bufio.Reader, probe *ph.PH) {
-	println("\nTemperature compensation")
-	println("\tget or <value>?  [get] ->")
-
-	if text, e := readAndSanitizeLine(reader); e != nil {
-		log.Fatal(e)
-	} else {
-		if text == "" || text == "get" {
-			if tc, e := probe.GetTempCompensation(); e != nil {
-				log.Fatal(e)
-			} else {
-				fmt.Printf("\t%f C\n", tc)
-			}
-		} else {
-			var val float32
-			for {
-				if tc, e := strconv.ParseFloat(text, 32); e != nil {
-					fmt.Printf("\tUnable to parse value '%s' as float32.  Please try again.  Error:  %s\n", text, e)
-				} else {
-					val = float32(tc)
-					break
-				}
-			}
-
-			if e := probe.TempCompensation(val); e != nil {
-				log.Fatal(e)
-			} else {
-				fmt.Printf("\tset value to: %f C\n", val)
-			}
-		}
-	}
+	utility.TempCompCmd(reader, probe)
 }
 
 func phCalCmd(reader *bufio.Reader, probe *ph.PH) {
 	println("\nPH calibration")
 	println("\tget, high, mid, low, clear? [get] ->")
 
-	if text, e := readAndSanitizeLine(reader); e != nil {
+	if text, e := utility.ReadAndSanitizeLine(reader); e != nil {
 		log.Fatal(e)
 	} else {
 		if text == "" || text == "get" {
@@ -162,7 +107,7 @@ func phCalCmd(reader *bufio.Reader, probe *ph.PH) {
 			for loop {
 				switch text {
 				case "clear":
-					if phCalClearConfirm(reader) {
+					if utility.CalClearConfirm(reader) {
 						if e := probe.ClearCalibration(); e != nil {
 							log.Fatal(e)
 						} else {
@@ -172,7 +117,7 @@ func phCalCmd(reader *bufio.Reader, probe *ph.PH) {
 					loop = false
 					break;
 				case "mid":
-					if phCalClearConfirm(reader) {
+					if utility.CalClearConfirm(reader) {
 						performPhCal(reader, probe, text)
 					}
 					loop = false
@@ -193,7 +138,7 @@ func phCalCmd(reader *bufio.Reader, probe *ph.PH) {
 func performPhCal(reader *bufio.Reader, probe *ph.PH, calPoint string) {
 	fmt.Printf("\tEnter PH value for '%s' ->", calPoint)
 
-	if text, e := readAndSanitizeLine(reader); e != nil {
+	if text, e := utility.ReadAndSanitizeLine(reader); e != nil {
 		log.Fatal(e)
 	} else {
 		var val float32
@@ -213,20 +158,6 @@ func performPhCal(reader *bufio.Reader, probe *ph.PH, calPoint string) {
 		}
 	}
 }
-
-func phCalClearConfirm(reader *bufio.Reader) bool {
-	println("\tThis command will clear all existing calibration.  Continue? yes/no [no] ->")
-
-	if text, e := readAndSanitizeLine(reader); e != nil {
-		log.Fatal(e)
-	} else {
-		return text == "yes"
-	}
-
-	return false
-}
-
-
 
 func slopeCmd(reader *bufio.Reader, probe *ph.PH) {
 	println("\nCalibration Slope")
