@@ -112,7 +112,7 @@ func (this* Conductivity) GetOutputParameters() ([]ConductivityMeasurement, erro
 	this.Mtx.Lock()
 	defer this.Mtx.Unlock()
 
-	if valMap, e := this.WriteReadParse([]byte("O,?"), 300 * time.Millisecond, outputParamRegex); e != nil {
+	if valMap, e := this.WriteReadParse("O,?", 300 * time.Millisecond, outputParamRegex); e != nil {
 		return nil, e
 	} else {
 		split := strings.Split(valMap["outputParams"], ",")
@@ -159,7 +159,7 @@ func (this* Conductivity) OutputParameters(outputParams map[ConductivityMeasurem
 			valStr = "1"
 		}
 
-		if _, e := this.Connection.Write(this.Address, []byte(fmt.Sprintf("O,%s,%s", p, valStr))); e != nil {
+		if _, e := this.Write(fmt.Sprintf("O,%s,%s", p, valStr)); e != nil {
 			return e
 		}
 
@@ -179,7 +179,7 @@ func (this *Conductivity) GetProbeType() (float32, error) {
 	this.Mtx.Lock()
 	defer this.Mtx.Unlock()
 
-	if valMap, e := this.WriteReadParse([]byte("K,?"), 300 * time.Millisecond, probeTypeRegex); e != nil {
+	if valMap, e := this.WriteReadParse("K,?", 300 * time.Millisecond, probeTypeRegex); e != nil {
 		return atlasScientific.ERROR_VALUE, e
 	} else {
 		if tempComp, err := strconv.ParseFloat(valMap["probeType"], 32); err != nil {
@@ -202,7 +202,7 @@ func (this *Conductivity) ProbeType(probeType float32) error {
 		return errors.New(fmt.Sprintf("Invalid probe type '%f'.  Must be between 0.1 and 10.", probeType))
 	}
 
-	if _, e := this.Connection.Write(this.Address, []byte(fmt.Sprintf("K,%f", probeType))); e != nil {
+	if _, e := this.Write(fmt.Sprintf("K,%f", probeType)); e != nil {
 		return e
 	}
 
@@ -232,7 +232,7 @@ func (this *Conductivity) Calibration(calPoint CalibrationPoint, ecValue float32
 		calTime = 1500 * time.Millisecond
 	}
 
-	if _, e := this.Connection.Write(this.Address, []byte(calStr)); e != nil {
+	if _, e := this.Write(calStr); e != nil {
 		return e
 	}
 

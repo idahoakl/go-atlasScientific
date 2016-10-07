@@ -55,7 +55,7 @@ func (this *PH) GetCalibrationSlope() (*CalibrationSlope, error) {
 	this.Mtx.Lock()
 	defer this.Mtx.Unlock()
 
-	if valMap, e := this.WriteReadParse([]byte("SLOPE"), 300 * time.Millisecond, slopeRegex); e != nil {
+	if valMap, e := this.WriteReadParse("SLOPE", 300 * time.Millisecond, slopeRegex); e != nil {
 		return nil, e
 	} else {
 		var calSlope CalibrationSlope
@@ -88,7 +88,7 @@ func (this *PH) Calibration(calPoint string, phValue float32) error {
 		return errors.New("Invalid calPoint value.  Valid values: high, mid low")
 	}
 
-	if _, e := this.Connection.Write(this.Address, []byte(fmt.Sprintf("CAL,%s,%f", calPoint, phValue))); e != nil {
+	if _, e := this.Write(fmt.Sprintf("CAL,%s,%f", calPoint, phValue)); e != nil {
 		return e
 	}
 

@@ -5,7 +5,7 @@ import (
 	"github.com/idahoakl/go-i2c"
 	"bufio"
 	"os"
-	"log"
+	log "github.com/Sirupsen/logrus"
 	"fmt"
 	"github.com/idahoakl/go-atlasScientific/utility"
 	"strconv"
