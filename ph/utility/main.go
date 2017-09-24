@@ -1,13 +1,13 @@
 package main
 
 import (
+	"bufio"
+	"fmt"
+	log "github.com/Sirupsen/logrus"
 	"github.com/idahoakl/go-atlasScientific/ph"
 	"github.com/idahoakl/go-atlasScientific/utility"
 	"github.com/idahoakl/go-i2c"
-	"bufio"
 	"os"
-	log "github.com/Sirupsen/logrus"
-	"fmt"
 	"strconv"
 )
 
@@ -23,6 +23,7 @@ var cmds = []cmd{
 	cmd{name: "info", exec: infoCmd, desc: utility.DeviceInfoDesc},
 	cmd{name: "stat", exec: statusCmd, desc: utility.DeviceStatDesc},
 	cmd{name: "read", exec: readCmd, desc: utility.ReadingDesc},
+	cmd{name: "poll", exec: pollCmd, desc: utility.PollDesc},
 	cmd{name: "temp", exec: tempCompCmd, desc: utility.TempCompDesc},
 	cmd{name: "phCal", exec: phCalCmd, desc: "Get/set PH calibration"},
 	cmd{name: "slope", exec: slopeCmd, desc: "Probe calibration slope"},
@@ -78,11 +79,15 @@ func infoCmd(reader *bufio.Reader, probe *ph.PH) {
 }
 
 func statusCmd(reader *bufio.Reader, probe *ph.PH) {
-	utility.ReadCmd(reader, probe)
+	utility.StatusCmd(reader, probe)
 }
 
 func readCmd(reader *bufio.Reader, probe *ph.PH) {
 	utility.ReadCmd(reader, probe)
+}
+
+func pollCmd(reader *bufio.Reader, probe *ph.PH) {
+	utility.PollCmd(reader, probe)
 }
 
 func tempCompCmd(reader *bufio.Reader, probe *ph.PH) {
@@ -115,18 +120,17 @@ func phCalCmd(reader *bufio.Reader, probe *ph.PH) {
 						}
 					}
 					loop = false
-					break;
+					break
 				case "mid":
 					if utility.CalClearConfirm(reader) {
 						performPhCal(reader, probe, text)
 					}
 					loop = false
-					break;
-				case "low":
-				case "high":
+					break
+				case "low", "high":
 					performPhCal(reader, probe, text)
 					loop = false
-					break;
+					break
 				default:
 					fmt.Printf("\t'%s' not recognized as a command.  Please try again\n", text)
 				}

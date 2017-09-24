@@ -1,14 +1,14 @@
 package conductivity
 
 import (
+	"errors"
+	"fmt"
 	"github.com/idahoakl/go-atlasScientific"
 	"github.com/idahoakl/go-i2c"
 	"regexp"
-	"time"
-	"errors"
-	"fmt"
-	"strings"
 	"strconv"
+	"strings"
+	"time"
 )
 
 type Conductivity struct {
@@ -28,38 +28,37 @@ const (
 type CalibrationPoint string
 
 const (
-	Dry CalibrationPoint = "dry"
-	One CalibrationPoint = "one"
-	Low CalibrationPoint = "low"
+	Dry  CalibrationPoint = "dry"
+	One  CalibrationPoint = "one"
+	Low  CalibrationPoint = "low"
 	High CalibrationPoint = "high"
 )
 
 var (
 	outputParamRegex = regexp.MustCompile(`\?O,(?P<outputParams>.*)`)
-	probeTypeRegex = regexp.MustCompile(`\?K,(?P<probeType>\d+\.?\d*)`)
+	probeTypeRegex   = regexp.MustCompile(`\?K,(?P<probeType>\d+\.?\d*)`)
 
-	conductivityMeasurementToOutputParam = map[ConductivityMeasurement]string {
-		EC: "EC",
-		TDS: "TDS",
-		Salinity: "S",
+	conductivityMeasurementToOutputParam = map[ConductivityMeasurement]string{
+		EC:              "EC",
+		TDS:             "TDS",
+		Salinity:        "S",
 		SpecificGravity: "SG",
 	}
-	outputParamToConductivityMeasurement = map[string]ConductivityMeasurement {
-		"EC": EC,
+	outputParamToConductivityMeasurement = map[string]ConductivityMeasurement{
+		"EC":  EC,
 		"TDS": TDS,
-		"S": Salinity,
-		"SG": SpecificGravity,
+		"S":   Salinity,
+		"SG":  SpecificGravity,
 	}
 )
 
 func New(address uint8, connection *i2c.I2C, defaultMeasurement ConductivityMeasurement) (*Conductivity, error) {
 	return &Conductivity{
 		DefaultMeasurement: defaultMeasurement,
-		AtlasScientific:
-			atlasScientific.AtlasScientific {
-				Connection: connection,
-				Address: address,
-			},
+		AtlasScientific: atlasScientific.AtlasScientific{
+			Connection: connection,
+			Address:    address,
+		},
 	}, nil
 }
 
@@ -108,11 +107,11 @@ func (this *Conductivity) GetAllValues() (map[ConductivityMeasurement]float32, e
 //	Write: O,?
 //	Wait: 300ms
 //	Read: ?O,EC,TDS,S,SG
-func (this* Conductivity) GetOutputParameters() ([]ConductivityMeasurement, error) {
+func (this *Conductivity) GetOutputParameters() ([]ConductivityMeasurement, error) {
 	this.Mtx.Lock()
 	defer this.Mtx.Unlock()
 
-	if valMap, e := this.WriteReadParse("O,?", 300 * time.Millisecond, outputParamRegex); e != nil {
+	if valMap, e := this.WriteReadParse("O,?", 300*time.Millisecond, outputParamRegex); e != nil {
 		return nil, e
 	} else {
 		split := strings.Split(valMap["outputParams"], ",")
@@ -126,9 +125,9 @@ func (this* Conductivity) GetOutputParameters() ([]ConductivityMeasurement, erro
 				outputParams = append(outputParams, p)
 			} else {
 				return nil,
-				errors.New(
-					fmt.Sprintf("Unable to parse output param '%s' at index %d.  Raw string: %s",
-						s, i, valMap["outputParams"]))
+					errors.New(
+						fmt.Sprintf("Unable to parse output param '%s' at index %d.  Raw string: %s",
+							s, i, valMap["outputParams"]))
 			}
 		}
 
@@ -140,7 +139,7 @@ func (this* Conductivity) GetOutputParameters() ([]ConductivityMeasurement, erro
 //	Write: O,EC,1
 //	Wait: 300ms
 //	Read: <successful read, no data>
-func (this* Conductivity) OutputParameters(outputParams map[ConductivityMeasurement]bool) error {
+func (this *Conductivity) OutputParameters(outputParams map[ConductivityMeasurement]bool) error {
 	this.Mtx.Lock()
 	defer this.Mtx.Unlock()
 
@@ -164,7 +163,7 @@ func (this* Conductivity) OutputParameters(outputParams map[ConductivityMeasurem
 		}
 
 		if _, e := this.PerformRead(300 * time.Millisecond); e != nil {
-			return e;
+			return e
 		}
 	}
 
@@ -179,7 +178,7 @@ func (this *Conductivity) GetProbeType() (float32, error) {
 	this.Mtx.Lock()
 	defer this.Mtx.Unlock()
 
-	if valMap, e := this.WriteReadParse("K,?", 300 * time.Millisecond, probeTypeRegex); e != nil {
+	if valMap, e := this.WriteReadParse("K,?", 300*time.Millisecond, probeTypeRegex); e != nil {
 		return atlasScientific.ERROR_VALUE, e
 	} else {
 		if tempComp, err := strconv.ParseFloat(valMap["probeType"], 32); err != nil {
@@ -207,7 +206,7 @@ func (this *Conductivity) ProbeType(probeType float32) error {
 	}
 
 	if _, e := this.PerformRead(300 * time.Millisecond); e != nil {
-		return e;
+		return e
 	}
 
 	return nil
@@ -237,17 +236,17 @@ func (this *Conductivity) Calibration(calPoint CalibrationPoint, ecValue float32
 	}
 
 	if _, e := this.PerformRead(calTime); e != nil {
-		return e;
+		return e
 	}
 
 	return nil
 }
 
 func (this *Conductivity) defaultOutputParameters() error {
-	allOn := map[ConductivityMeasurement]bool {
-		EC: true,
-		TDS: true,
-		Salinity: true,
+	allOn := map[ConductivityMeasurement]bool{
+		EC:              true,
+		TDS:             true,
+		Salinity:        true,
 		SpecificGravity: true,
 	}
 

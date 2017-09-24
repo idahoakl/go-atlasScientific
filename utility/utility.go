@@ -1,19 +1,21 @@
 package utility
 
 import (
-	"fmt"
 	"bufio"
-	"log"
+	"fmt"
+	log "github.com/Sirupsen/logrus"
+	"github.com/idahoakl/go-atlasScientific"
 	"strconv"
 	"strings"
-	"github.com/idahoakl/go-atlasScientific"
+	"time"
 )
 
 const (
 	DeviceInfoDesc = "Device information"
 	DeviceStatDesc = "Device status"
-	ReadingDesc = "Take reading"
-	TempCompDesc = "Get/set temperature compensation"
+	ReadingDesc    = "Take reading"
+	TempCompDesc   = "Get/set temperature compensation"
+	PollDesc	   = "Continuously get reading every second"
 )
 
 func ReadAndSanitizeLine(reader *bufio.Reader) (string, error) {
@@ -47,11 +49,7 @@ func StatusCmd(reader *bufio.Reader, probe atlasScientific.AtlasScientificSensor
 
 func ReadCmd(reader *bufio.Reader, probe atlasScientific.AtlasScientificSensor) {
 	println("\nReading")
-	if v, e := probe.GetValue(); e != nil {
-		log.Fatal(e)
-	} else {
-		fmt.Printf("\t%f\n", v)
-	}
+	readAndPrintProbe(probe)
 }
 
 func TempCompCmd(reader *bufio.Reader, probe atlasScientific.AtlasScientificSensor) {
@@ -87,6 +85,14 @@ func TempCompCmd(reader *bufio.Reader, probe atlasScientific.AtlasScientificSens
 	}
 }
 
+func PollCmd(reader *bufio.Reader, probe atlasScientific.AtlasScientificSensor) {
+	println("\nReading every second")
+	for {
+		readAndPrintProbe(probe)
+		time.Sleep(1 * time.Second)
+	}
+}
+
 func CalClearConfirm(reader *bufio.Reader) bool {
 	println("\tThis command will clear all existing calibration.  Continue? yes/no [no] ->")
 
@@ -97,4 +103,12 @@ func CalClearConfirm(reader *bufio.Reader) bool {
 	}
 
 	return false
+}
+
+func readAndPrintProbe(probe atlasScientific.AtlasScientificSensor) {
+	if v, e := probe.GetValue(); e != nil {
+		log.Fatal(e)
+	} else {
+		fmt.Printf("\t%f\n", v)
+	}
 }

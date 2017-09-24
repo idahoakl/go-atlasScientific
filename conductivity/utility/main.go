@@ -1,13 +1,13 @@
 package main
 
 import (
-	"github.com/idahoakl/go-atlasScientific/conductivity"
-	"github.com/idahoakl/go-i2c"
 	"bufio"
-	"os"
-	log "github.com/Sirupsen/logrus"
 	"fmt"
+	log "github.com/Sirupsen/logrus"
+	"github.com/idahoakl/go-atlasScientific/conductivity"
 	"github.com/idahoakl/go-atlasScientific/utility"
+	"github.com/idahoakl/go-i2c"
+	"os"
 	"strconv"
 )
 
@@ -23,6 +23,7 @@ var cmds = []cmd{
 	cmd{name: "info", exec: infoCmd, desc: utility.DeviceInfoDesc},
 	cmd{name: "stat", exec: statusCmd, desc: utility.DeviceStatDesc},
 	cmd{name: "read", exec: readCmd, desc: utility.ReadingDesc},
+	cmd{name: "poll", exec: pollCmd, desc: utility.PollDesc},
 	cmd{name: "temp", exec: tempCompCmd, desc: utility.TempCompDesc},
 	cmd{name: "cal", exec: conductivityCalCmd, desc: "Get/set conductivity calibration"},
 	cmd{name: "probe", exec: probeTypeCmd, desc: "Probe type (K value)"},
@@ -74,7 +75,7 @@ func printActions() {
 }
 
 func infoCmd(reader *bufio.Reader, probe *conductivity.Conductivity) {
-	utility.InfoCmd(reader, probe);
+	utility.InfoCmd(reader, probe)
 }
 
 func statusCmd(reader *bufio.Reader, probe *conductivity.Conductivity) {
@@ -83,6 +84,10 @@ func statusCmd(reader *bufio.Reader, probe *conductivity.Conductivity) {
 
 func readCmd(reader *bufio.Reader, probe *conductivity.Conductivity) {
 	utility.ReadCmd(reader, probe)
+}
+
+func pollCmd(reader *bufio.Reader, probe *conductivity.Conductivity) {
+	utility.PollCmd(reader, probe)
 }
 
 func tempCompCmd(reader *bufio.Reader, probe *conductivity.Conductivity) {
