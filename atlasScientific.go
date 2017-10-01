@@ -1,23 +1,23 @@
 package atlasScientific
 
 import (
-	"github.com/idahoakl/go-i2c"
-	"time"
+	"bytes"
 	"errors"
-	"sync"
+	"fmt"
+	log "github.com/Sirupsen/logrus"
+	"github.com/idahoakl/go-i2c"
 	"regexp"
 	"strconv"
-	"fmt"
-	"bytes"
-	log "github.com/Sirupsen/logrus"
+	"sync"
+	"time"
 )
 
 var (
-	statusRegex = regexp.MustCompile(`\?STATUS,(?P<restartCode>\D),(?P<vccVolt>\d+\.?\d*)`)
+	statusRegex     = regexp.MustCompile(`\?STATUS,(?P<restartCode>\D),(?P<vccVolt>\d+\.?\d*)`)
 	deviceInfoRegex = regexp.MustCompile(`\?I,(?P<deviceType>\w+),(?P<firmwareVersion>\d+\.?\d*)`)
-	tempCompRegex = regexp.MustCompile(`\?T,(?P<tempCompensation>\d+\.?\d*)`)
-	ledStatRegex = regexp.MustCompile(`\?L,(?P<ledStatus>[01])`)
-	calRegex = regexp.MustCompile(`\?CAL,(?P<calCount>\d)`)
+	tempCompRegex   = regexp.MustCompile(`\?T,(?P<tempCompensation>\d+\.?\d*)`)
+	ledStatRegex    = regexp.MustCompile(`\?L,(?P<ledStatus>[01])`)
+	calRegex        = regexp.MustCompile(`\?CAL,(?P<calCount>\d)`)
 
 	errParseResponse = errors.New("Response could not be parsed")
 )
@@ -32,11 +32,11 @@ type AtlasScientific struct {
 
 type Status struct {
 	RestartCode string
-	VccVoltage float32
+	VccVoltage  float32
 }
 
 type DeviceInfo struct {
-	Type string
+	Type            string
 	FirmwareVersion float32
 }
 
@@ -99,7 +99,7 @@ func (this *AtlasScientific) GetStatus() (*Status, error) {
 	this.Mtx.Lock()
 	defer this.Mtx.Unlock()
 
-	if valMap, e := this.WriteReadParse("STATUS", 300 * time.Millisecond, statusRegex); e != nil {
+	if valMap, e := this.WriteReadParse("STATUS", 300*time.Millisecond, statusRegex); e != nil {
 		return nil, e
 	} else {
 		if f, e := strconv.ParseFloat(valMap["vccVolt"], 32); e != nil {
@@ -107,7 +107,7 @@ func (this *AtlasScientific) GetStatus() (*Status, error) {
 		} else {
 			return &Status{
 				RestartCode: valMap["restartCode"],
-				VccVoltage: float32(f),
+				VccVoltage:  float32(f),
 			}, nil
 		}
 	}
@@ -121,14 +121,14 @@ func (this *AtlasScientific) GetDeviceInfo() (*DeviceInfo, error) {
 	this.Mtx.Lock()
 	defer this.Mtx.Unlock()
 
-	if valMap, e := this.WriteReadParse("I", 300 * time.Millisecond, deviceInfoRegex); e != nil {
+	if valMap, e := this.WriteReadParse("I", 300*time.Millisecond, deviceInfoRegex); e != nil {
 		return nil, e
 	} else {
 		if f, e := strconv.ParseFloat(valMap["firmwareVersion"], 32); e != nil {
 			return nil, e
 		} else {
 			return &DeviceInfo{
-				Type: valMap["deviceType"],
+				Type:            valMap["deviceType"],
 				FirmwareVersion: float32(f),
 			}, nil
 		}
@@ -143,7 +143,7 @@ func (this *AtlasScientific) GetTempCompensation() (float32, error) {
 	this.Mtx.Lock()
 	defer this.Mtx.Unlock()
 
-	if valMap, e := this.WriteReadParse("T,?", 300 * time.Millisecond, tempCompRegex); e != nil {
+	if valMap, e := this.WriteReadParse("T,?", 300*time.Millisecond, tempCompRegex); e != nil {
 		return 0, e
 	} else {
 		if tempComp, err := strconv.ParseFloat(valMap["tempCompensation"], 32); err != nil {
@@ -167,7 +167,7 @@ func (this *AtlasScientific) TempCompensation(tempC float32) error {
 	}
 
 	if _, e := this.PerformRead(300 * time.Millisecond); e != nil {
-		return e;
+		return e
 	}
 
 	return nil
@@ -181,7 +181,7 @@ func (this *AtlasScientific) GetLedStatus() (bool, error) {
 	this.Mtx.Lock()
 	defer this.Mtx.Unlock()
 
-	if valMap, e := this.WriteReadParse("L,?", 300 * time.Millisecond, ledStatRegex); e != nil {
+	if valMap, e := this.WriteReadParse("L,?", 300*time.Millisecond, ledStatRegex); e != nil {
 		return false, e
 	} else {
 		if isLedOn, err := strconv.ParseBool(valMap["ledStatus"]); err != nil {
@@ -211,7 +211,7 @@ func (this *AtlasScientific) LedStatus(isLedOn bool) error {
 	}
 
 	if _, e := this.PerformRead(300 * time.Millisecond); e != nil {
-		return e;
+		return e
 	}
 
 	return nil
@@ -230,7 +230,7 @@ func (this *AtlasScientific) ClearCalibration() error {
 	}
 
 	if _, e := this.PerformRead(1300 * time.Millisecond); e != nil {
-		return e;
+		return e
 	}
 
 	return nil
@@ -244,7 +244,7 @@ func (this *AtlasScientific) GetCalibrationCount() (int, error) {
 	this.Mtx.Lock()
 	defer this.Mtx.Unlock()
 
-	if valMap, e := this.WriteReadParse("CAL,?", 300 * time.Millisecond, calRegex); e != nil {
+	if valMap, e := this.WriteReadParse("CAL,?", 300*time.Millisecond, calRegex); e != nil {
 		return 0, e
 	} else {
 		if i, e := strconv.ParseInt(valMap["calCount"], 10, 0); e != nil {
@@ -256,16 +256,16 @@ func (this *AtlasScientific) GetCalibrationCount() (int, error) {
 }
 
 func (this *AtlasScientific) PerformRead(waitTime time.Duration) (string, error) {
-	time.Sleep(waitTime);
+	time.Sleep(waitTime)
 
-	data := make([]byte, 64);
+	data := make([]byte, 64)
 	if _, e := this.Connection.Read(this.Address, data); e != nil {
 		return "", e
 	}
 
-	this.GetContextLogger().WithField("data", data).Debug("Raw data read from device")
+	//this.GetContextLogger().WithField("data", data).Debug("Raw data read from device")
 
-	e := checkReadError(data);
+	e := checkReadError(data)
 	if e != nil {
 		if e.status == 254 {
 			this.GetContextLogger().WithField("waitTime", waitTime).Warn("Attempting re-read after additional wait time")
@@ -275,22 +275,22 @@ func (this *AtlasScientific) PerformRead(waitTime time.Duration) (string, error)
 				return "", e
 			}
 
-			this.GetContextLogger().WithField("data", data).Debug("Raw data read from device")
+			//this.GetContextLogger().WithField("data", data).Debug("Raw data read from device")
 
 			if e := checkReadError(data); e != nil {
 				return "", e
 			}
 
 		} else {
-			return "", e;
+			return "", e
 		}
 	}
 
 	trimData := bytes.Trim(data, "\x00")
 
-	this.GetContextLogger().WithField("trimmedData", trimData).Debug("Trimmed data")
+	//this.GetContextLogger().WithField("trimmedData", trimData).Debug("Trimmed data")
 
-	return string(trimData[1:]), nil;
+	return string(trimData[1:]), nil
 }
 
 func (this *AtlasScientific) WriteReadParse(writeCommand string, waitTime time.Duration, parseRegex *regexp.Regexp) (map[string]string, error) {
@@ -312,17 +312,17 @@ func (this *AtlasScientific) WriteReadParse(writeCommand string, waitTime time.D
 func (this *AtlasScientific) Write(data string) (int, error) {
 	byteData := []byte(data)
 
-	this.GetContextLogger().WithFields(log.Fields{
-		"data": data,
+	/* this.GetContextLogger().WithFields(log.Fields{
+		"data":     data,
 		"byteData": byteData,
-	}).Debug("Writing to device")
+	}).Debug("Writing to device") */
 
 	return this.Connection.Write(this.Address, byteData)
 }
 
-func (this *AtlasScientific) GetContextLogger() (*log.Entry) {
+func (this *AtlasScientific) GetContextLogger() *log.Entry {
 	return log.WithFields(log.Fields{
-		"i2cBus": this.Connection.Bus,
+		"i2cBus":        this.Connection.Bus,
 		"deviceAddress": this.Address,
 	})
 }
@@ -348,23 +348,23 @@ func FindStringSubmatchMap(r *regexp.Regexp, s string) (map[string]string, error
 func checkReadError(data []byte) *ReadError {
 	switch data[0] {
 	case 1:
-		return nil;
+		return nil
 	case 2:
 		return &ReadError{
-			status: 2,
+			status:  2,
 			message: "Read error",
 		}
 	case 254:
 		return &ReadError{
-			status: 254,
+			status:  254,
 			message: "Pending",
 		}
 	case 255:
 		return &ReadError{
-			status: 255,
+			status:  255,
 			message: "No Data",
 		}
 	}
 
-	return nil;
+	return nil
 }
